@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Dummy data with image URLs, author, and createdAt
 const allCourses = Array.from({ length: 20 }, (_, i) => ({
@@ -15,6 +16,7 @@ const allCourses = Array.from({ length: 20 }, (_, i) => ({
 const categories = ['All', 'Math', 'Science', 'Programming', 'Art'];
 
 const Courseview = () => {
+    const navigate = useNavigate();
     const [visibleCount, setVisibleCount] = useState(8);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [search, setSearch] = useState('');
@@ -42,7 +44,8 @@ const Courseview = () => {
 
     const handleViewCourse = (id) => {
         // Replace with your routing logic (e.g., react-router-dom's useNavigate)
-        window.location.href = `/course/${id}`;
+        // window.location.href = `/course/${id}`;
+        navigate(`course/${id}`);
     };
 
     const handleSearchKeyDown = (e) => {

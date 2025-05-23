@@ -1,9 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import CourseList from './Components/CourseList'
 import './index.css'
+import App from './App'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <CourseList />
+    <App/>
   </StrictMode>
 )
