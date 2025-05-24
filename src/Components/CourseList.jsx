@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { allCourses } from "../data/courses";
+import { useAuth } from "../context/AuthContext";
+import CourseForm from "./CourseForm";
 
 const categories = ["All", "Math", "Science", "Programming", "Art"];
 
 const CourseList = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showCourseForm, setShowCourseForm] = useState(false);
   const [visibleCount, setVisibleCount] = useState(8);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
@@ -81,6 +85,42 @@ const CourseList = () => {
           </ul>
         )}
       </div>
+      {/* Add Course Button (for teachers/admins) */}
+      {(user.role === "teacher" || user.role === "admin") && (
+        <div className="text-center mb-8">
+          <button
+            onClick={() => setShowCourseForm(true)}
+            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            Add New Course
+          </button>
+        </div>
+      )}
+      {/* Course Form Modal */}
+      {showCourseForm && (
+        <CourseForm
+          onClose={() => setShowCourseForm(false)}
+          onSave={(newCourseData) => {
+            // Create the complete course object
+            const newCourse = {
+              ...newCourseData,
+              id: Math.max(...allCourses.map((c) => c.id)) + 1,
+              author: user.name || "Current User",
+              createdAt: new Date().toLocaleDateString(),
+              updatedAt: new Date().toLocaleDateString(),
+              longDescription: newCourseData.description,
+              sections: [],
+            };
+
+            // Add to courses array (in real app, this would be an API call)
+            allCourses.unshift(newCourse);
+            setShowCourseForm(false);
+
+            // In a real app, you would update state from API response:
+            // setCourses([newCourse, ...courses]);
+          }}
+        />
+      )}
 
       {/* Filter Buttons */}
       <div className="mb-6 text-center">
