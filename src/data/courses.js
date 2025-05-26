@@ -1,4 +1,5 @@
 export const allCourses = Array.from({ length: 20 }, (_, i) => ({
+  // demo array for in use
   id: i + 1,
   title: `Course ${i + 1}`,
   category: ["Math", "Science", "Programming", "Art"][i % 4],
@@ -34,5 +35,5 @@ export const allCourses = Array.from({ length: 20 }, (_, i) => ({
       assignments: [],
     },
   ],
-  syllabusPdf: "/sample-syllabus.pdf", // Path to your PDF file
+  syllabusPdf: "/sample-syllabus.pdf",
 }));
