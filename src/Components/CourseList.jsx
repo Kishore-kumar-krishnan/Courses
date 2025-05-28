@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { allCourses } from "../data/courses";
 import { useAuth } from "../context/AuthContext";
 import CourseForm from "./CourseForm";
 
@@ -15,11 +14,47 @@ const CourseList = () => {
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hoveredCourseId, setHoveredCourseId] = useState(null);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchCourses() {
+      try {
+        const response = await fetch('https://6835376fcd78db2058c098e8.mockapi.io/api/course');
+        if (!response.ok) throw new Error('Failed to fetch courses');
+        const coursesData = await response.json();
+
+        const coursesWithSections = await Promise.all(
+          coursesData.map(async (course) => {
+            try {
+              const sectionsResponse = await fetch(
+                `https://6835376fcd78db2058c098e8.mockapi.io/api/course/${course.id}/sections`
+              );
+              const sections = sectionsResponse.ok ? await sectionsResponse.json() : [];
+              return { ...course, sections };
+            } catch (err) {
+              console.error(`Error fetching sections for course ${course.id}:`, err);
+              return { ...course, sections: [] };
+            }
+          })
+        );
+
+        setCourses(coursesWithSections);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+
+    fetchCourses();
+  }, []);
 
   const filteredCourses =
     selectedCategory === "All"
-      ? allCourses
-      : allCourses.filter((c) => c.category === selectedCategory);
+      ? courses
+      : courses.filter((c) => c.category === selectedCategory);
 
   const searchFilteredCourses = filteredCourses.filter((course) =>
     course.title.toLowerCase().includes(search.toLowerCase())
@@ -37,18 +72,21 @@ const CourseList = () => {
 
   const handleViewCourse = (course) => {
     navigate(`/course/${course.id}`, {
-      state: {
-        course: course,
-        // allCourses: allCourses, // Pass the entire array if needed
-      },
+      state: { course }
     });
   };
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") {
-      setShowSuggestions(false);
-    }
+    if (e.key === "Enter") setShowSuggestions(false);
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading courses...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-8 text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen py-6 px-4 bg-white text-black">
@@ -85,6 +123,7 @@ const CourseList = () => {
           </ul>
         )}
       </div>
+
       {/* Add Course Button (for teachers/admins) */}
       {(user.role === "teacher" || user.role === "admin") && (
         <div className="text-center mb-8">
@@ -96,28 +135,24 @@ const CourseList = () => {
           </button>
         </div>
       )}
+
       {/* Course Form Modal */}
       {showCourseForm && (
         <CourseForm
           onClose={() => setShowCourseForm(false)}
           onSave={(newCourseData) => {
-            // Create the complete course object
+            // In a real app, you would make an API call here
             const newCourse = {
               ...newCourseData,
-              id: Math.max(...allCourses.map((c) => c.id)) + 1,
+              id: Math.max(...courses.map((c) => c.id)) + 1,
               author: user.name || "Current User",
               createdAt: new Date().toLocaleDateString(),
               updatedAt: new Date().toLocaleDateString(),
               longDescription: newCourseData.description,
               sections: [],
             };
-
-            // Add to courses array (in real app, this would be an API call)
-            allCourses.unshift(newCourse);
+            setCourses([newCourse, ...courses]);
             setShowCourseForm(false);
-
-            // In a real app, you would update state from API response:
-            // setCourses([newCourse, ...courses]);
           }}
         />
       )}
@@ -133,12 +168,12 @@ const CourseList = () => {
               setSearch("");
             }}
             className={`mr-2 mb-2 px-6 py-2 rounded-full font-semibold transition-all shadow
-                            ${
-                              selectedCategory === cat
-                                ? "bg-gradient-to-r from-black to-gray-700 text-white shadow-md"
-                                : "bg-white text-black border border-gray-200 hover:bg-gray-100"
-                            }
-                        `}
+              ${
+                selectedCategory === cat
+                  ? "bg-gradient-to-r from-black to-gray-700 text-white shadow-md"
+                  : "bg-white text-black border border-gray-200 hover:bg-gray-100"
+              }
+            `}
           >
             {cat}
           </button>
@@ -161,9 +196,13 @@ const CourseList = () => {
             >
               <div className="h-40 overflow-hidden relative">
                 <img
-                  src={course.image}
-                  alt={course.title}
+                  src={course.image || 'https://via.placeholder.com/300x200?text=No+Image'}
+                  alt={`Cover image for ${course.title}`}
                   className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/300x200?text=Image+Error';
+                  }}
                 />
                 <span className="absolute top-3 left-3 bg-black bg-opacity-85 text-white text-xs px-3 py-1 rounded-full font-medium shadow">
                   {course.category}
@@ -204,17 +243,16 @@ const CourseList = () => {
       </div>
 
       {/* Show More Button */}
-      {visibleCount < searchFilteredCourses.length &&
-        searchFilteredCourses.length > 0 && (
-          <div className="text-center mt-10">
-            <button
-              onClick={handleShowMore}
-              className="px-9 py-3 bg-gradient-to-r from-black to-gray-700 text-white rounded-full font-semibold text-lg shadow-lg hover:from-gray-900 hover:to-gray-700 transition"
-            >
-              Show More
-            </button>
-          </div>
-        )}
+      {visibleCount < searchFilteredCourses.length && (
+        <div className="text-center mt-10">
+          <button
+            onClick={handleShowMore}
+            className="px-9 py-3 bg-gradient-to-r from-black to-gray-700 text-white rounded-full font-semibold text-lg shadow-lg hover:from-gray-900 hover:to-gray-700 transition"
+          >
+            Show More
+          </button>
+        </div>
+      )}
     </div>
   );
 };
