@@ -390,7 +390,7 @@ function ViewCourse() {
           )} */}
 
           {/* Assignments button moved outside sections */}
-          <div className="mb-4">
+          {/* <div className="mb-4">
             <button
               onClick={handleViewAssignments}
               className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -398,7 +398,7 @@ function ViewCourse() {
               <ClipboardDocumentListIcon className="w-5 h-5" />
               View All Assignments
             </button>
-          </div>
+          </div> */}
 
           {!isEnrolled && user.role === "student" ? (
             <button
