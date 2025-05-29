@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 import {
   PencilSquareIcon,
   TrashIcon,
@@ -17,37 +18,29 @@ function ViewCourse() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const [course, setCourse] = useState(
-    state?.course || {
-      title: "",
-      description: "",
-      longDescription: "",
-      duration: "",
-      credit: 0,
-      isActive: true,
-      sections: [],
-    }
-  );
+  const [course, setCourse] = useState( state?.course );
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    title: "",
-    description: "",
-    longDescription: "",
-    duration: "",
-    credit: 0,
-    isActive: true,
+  course_id: '',
+  courseTitle: '',
+  courseDescription: '',
+  instructorName: '',
+  dept: '',
+  duration: '0',
+  credit: '0',
+  isActive: true
   });
 
   const [newSection, setNewSection] = useState({
-    title: "",
-    content: "",
+    sectionTitle: "",
+    sectionDesc: "",
   });
 
   const [editingSectionId, setEditingSectionId] = useState(null);
   const [sectionEditData, setSectionEditData] = useState({
-    title: "",
-    content: "",
+    sectionTitle: "",
+    sectionDesc: "",
   });
 
   const [showVideoForm, setShowVideoForm] = useState(false);
@@ -57,36 +50,84 @@ function ViewCourse() {
   const [showAddSection, setShowAddSection] = useState(false);
   const [showSection, setShowSection] = useState(true);
   const [showAssignments, setShowAssignments] = useState(false);
+  const [loading, setLoading] = useState(!state?.course);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (course) {
-      setEditData({
-        title: course.title,
-        description: course.description,
-        longDescription: course.longDescription,
-        duration: course.duration,
-        credit: course.credit,
-        isActive: course.isActive,
-      });
-    }
-  }, [course]);
+  // const fetchCourseDetails = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await axios.get(`http://localhost:8080/api/course/details?id=${course_id}`);
+  //       setCourse(response.data);
+  //       console.log("resoponse.data ",response.data)
+      
+  //   } catch (err) {
+  //     setError(err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  //  useEffect(() => {
+  //   if (course_id && !course) {
+  //     fetchCourseDetails();
+  //   }
+  // }, [course.course_id]);
+
+const handleEditCourse = () => {
+  setEditData({
+    course_id: course.course_id,
+    courseTitle: course.courseTitle || '',
+    courseDescription: course.courseDescription || '',
+    instructorName: course.instructorName || '',
+    dept: course.dept || availableDepartments[0],
+    duration: course.duration?.toString() || '0',
+    credit: course.credit?.toString() || '0',
+    isActive: course.isActive !== undefined ? course.isActive : true
+  });
+  setIsEditing(true);
+};
+
 
   const isEnrolled =
     user.role === "teacher" || user.role === "admin"
       ? true
       : localStorage.getItem(`enrolled_${id}`) === "true";
 
-  const handleEditCourse = () => setIsEditing(true);
+  
+const handleSaveCourse = async (e) => {
+  e.preventDefault();
+  
+  try {
+    // Prepare the data for API request
+    const updatedCourse = {
+      ...editData,
+      duration: parseInt(editData.duration),
+      credit: parseInt(editData.credit),
+    };
 
-  const handleSaveCourse = (e) => {
-    e.preventDefault();
+    // Make PUT request to update the course
+    const response = await axios.put(
+      "http://localhost:8080/api/course/update",
+      updatedCourse
+    );
+
+    // Update local state only after successful API response
     setCourse({
       ...course,
-      ...editData,
-      updatedAt: new Date().toLocaleDateString(),
+      ...updatedCourse,
+      updatedAt: new Date().toISOString(), // Better to use ISO format
     });
+    
     setIsEditing(false);
-  };
+    
+    // Optional: Show success message
+    console.log("Course updated successfully:", response.data);
+    
+  } catch (error) {
+    console.error("Error updating course:", error);
+    alert("Failed to update course. Please try again.");
+  }
+};
 
   const handleAddSection = () => {
     const currentSections = course.sections || [];
@@ -100,24 +141,26 @@ function ViewCourse() {
       sections: [
         ...currentSections,
         {
-          id: newSectionId,
-          title: newSection.title,
-          content: newSection.content,
+          section_id: newSection.sectionId,
+          sectionTitle: newSection.sectionTitle,
+          sectionDesc: newSection.sectionDesc,
+          createdAt : newSection.createdAt,
+          updatedAt : newSection.updatedAt,
           videos: [],
           pdfs: [],
           assignments: [],
         },
       ],
     });
-    setNewSection({ title: "", content: "" });
+    setNewSection({ sectionTitle: "", content: "" });
     setShowAddSection(false);
   };
 
   const handleEditSection = (section) => {
     setEditingSectionId(section.id);
     setSectionEditData({
-      title: section.title,
-      content: section.content,
+      sectionTitle: section.sectionTitle,
+      sectionDesc: section.sectionDesc,
     });
   };
 
@@ -129,11 +172,11 @@ function ViewCourse() {
         section.id === editingSectionId
           ? {
               ...section,
-              title: sectionEditData.title,
-              content: sectionEditData.content,
+              sectionTitle: sectionEditData.sectionTitle,
+              sectionDesc: sectionEditData.sectionDesc,
             }
           : section
-      ),
+      ),      
     });
     setEditingSectionId(null);
   };
@@ -249,9 +292,9 @@ function ViewCourse() {
                 <label className="block text-gray-800 mb-2 font-medium">Title</label>
                 <input
                   type="text"
-                  value={editData.title}
+                  value={editData.courseTitle}
                   onChange={(e) =>
-                    setEditData({ ...editData, title: e.target.value })
+                    setEditData({ ...editData, courseTitle: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                   required
@@ -260,11 +303,11 @@ function ViewCourse() {
               <div className="mb-5">
                 <label className="block text-gray-800 mb-2 font-medium">Description</label>
                 <textarea
-                  value={editData.longDescription}
+                  value={editData.courseDescription}
                   onChange={(e) =>
                     setEditData({
                       ...editData,
-                      longDescription: e.target.value,
+                      courseDescription: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
@@ -345,36 +388,36 @@ function ViewCourse() {
             <div className="md:w-1/3 relative">
               <img
                 src={course.image}
-                alt={course.title}
+                alt={course.courseTitle}
                 className="w-full rounded-xl shadow-md border border-gray-200"
               />
-              {(user.role === "teacher" || user.role === "admin") && (
+              {/* {(user.role === "teacher" || user.role === "admin") && (
                 <button
                   onClick={handleEditCourse}
                   className="absolute top-2 right-2 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-900 z-10 shadow"
                 >
                   <PencilSquareIcon className="w-5 h-5" />
                 </button>
-              )}
+              )} */}
             </div>
             <div className="md:w-2/3">
-              <h1 className="text-4xl font-extrabold mb-3 text-gray-800">{course.title}</h1>
+              <h1 className="text-4xl font-extrabold mb-3 text-gray-800">{course.courseTitle}</h1>
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <span className="px-3 py-1 bg-gray-200 text-gray-900 rounded-full text-xs font-semibold">
-                  {course.category}
+                  {course.dept}
                 </span>
-                <span className="text-gray-600 text-sm">By {course.author}</span>
+                <span className="text-gray-600 text-sm">By <span className="text-red-600">{course.instructorName}</span></span>
                 <span className="text-gray-600 text-sm">Duration: {course.duration}</span>
                 <span className="text-gray-600 text-sm">Credits: {course.credit}</span>
                 <span className="text-gray-600 text-sm">
                   Status: {course.isActive ? "Active" : "Inactive"}
                 </span>
-                <span className="text-gray-600 text-sm">Created: {course.createdAt}</span>
+                <span className="text-gray-600 text-sm">Created: {new Date(course.createdAt).toLocaleDateString()}</span>
                 {course.updatedAt && (
-                  <span className="text-gray-600 text-sm">Updated: {course.updatedAt}</span>
+                  <span className="text-gray-600 text-sm">Updated: {new Date(course.updatedAt).toLocaleDateString()}</span>
                 )}
               </div>
-              <p className="text-base text-gray-800 mb-6">{course.longDescription}</p>
+              <p className="text-base text-gray-800 mb-6">{course.courseDescription}</p>
               {!isEnrolled && user.role === "student" ? (
                 <button
                   onClick={() => localStorage.setItem(`enrolled_${id}`, "true")}
@@ -433,17 +476,17 @@ function ViewCourse() {
                             <input
                               type="text"
                               placeholder="Section Title"
-                              value={newSection.title}
+                              value={newSection.sectionTitle}
                               onChange={(e) =>
-                                setNewSection({ ...newSection, title: e.target.value })
+                                setNewSection({ ...newSection, sectionTitle: e.target.value })
                               }
                               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                             />
                             <textarea
                               placeholder="Section Content"
-                              value={newSection.content}
+                              value={newSection.sectionDesc}
                               onChange={(e) =>
-                                setNewSection({ ...newSection, content: e.target.value })
+                                setNewSection({ ...newSection, sectionDesc: e.target.value })
                               }
                               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                               rows="3"
@@ -451,7 +494,7 @@ function ViewCourse() {
                             <button
                               onClick={handleAddSection}
                               className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold"
-                              disabled={!newSection.title}
+                              disabled={!newSection.sectionTitle}
                             >
                               Add Section
                             </button>
@@ -471,14 +514,14 @@ function ViewCourse() {
                           >
                             <div className="bg-gray-100 px-6 py-4 flex justify-between items-center">
                               <div className="flex items-center gap-2">
-                                {editingSectionId === section.id ? (
+                                {editingSectionId === section.section_id ? (
                                   <input
                                     type="text"
-                                    value={sectionEditData.title}
+                                    value={sectionEditData.sectionTitle}
                                     onChange={(e) =>
                                       setSectionEditData({
                                         ...sectionEditData,
-                                        title: e.target.value,
+                                        courseTitle: e.target.value,
                                       })
                                     }
                                     className="px-3 py-1 border border-gray-200 rounded-lg"
@@ -487,7 +530,7 @@ function ViewCourse() {
                                     }
                                   />
                                 ) : (
-                                  <h3 className="font-semibold text-lg text-gray-800">{section.title}</h3>
+                                  <h3 className="font-semibold text-lg text-gray-800">{section.sectionTitle}</h3>
                                 )}
                                 {(user.role === "teacher" || user.role === "admin") && (
                                   <div className="flex gap-1">
@@ -853,7 +896,7 @@ function ViewCourse() {
                                   : "bg-gray-300"
                               }`}
                             ></span>
-                            <span className="truncate">{section.title}</span>
+                            <span className="truncate">{section.sectionTitle}</span>
                           </li>
                         ))
                       ) : (
