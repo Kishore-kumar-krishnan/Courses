@@ -38,7 +38,7 @@ const SectionContent = ({ section, user }) => {
         if (section.section_id) {
             fetchContent();
         }
-    }, [section.section_id]);
+    }, [contents]);
 
     // Handle opening video form
     const handleAddVideo = (sectionId) => {
@@ -64,7 +64,7 @@ const SectionContent = ({ section, user }) => {
             };
 
             // Make API call
-            const response = await axios.post(
+            await axios.post(
                 'http://localhost:8080/api/course/section/content/add',
                 requestBody
             );
@@ -88,13 +88,13 @@ const SectionContent = ({ section, user }) => {
 
     // Remove Content Handler
     const handleRemoveContent = async (contentId, contentType) => {
-        if (!window.confirm(`Are you sure you want to delete this ${contentType}?`)) return;
+        if (!window.confirm(`Are you sure you want to delete this ${contentType} ? `)) return;
 
         try {
-            await axios.delete(`http://localhost:8080/api/course/section/content/delete`, 
-                {
-                data: { contentId }
-            });
+            await axios.delete(`http://localhost:8080/api/course/section/content/delete`,{
+                data: contentId
+            } 
+            );
 
             // Update local state by filtering out the deleted content
             setContents(prev => prev.filter(c => c.id !== contentId));
@@ -141,7 +141,7 @@ const SectionContent = ({ section, user }) => {
                                     </h5>
                                     {(user.role === "teacher" || user.role === "admin") && (
                                         <button
-                                            onClick={() => handleRemoveContent(video.id, "VIDEO")}
+                                            onClick={() => handleRemoveContent(video.content_id, "VIDEO")}
                                             className="text-gray-500 hover:text-gray-800"
                                         >
                                             <TrashIcon className="w-4 h-4" />
@@ -192,7 +192,7 @@ const SectionContent = ({ section, user }) => {
                                     </h5>
                                     {(user.role === "teacher" || user.role === "admin") && (
                                         <button
-                                            onClick={() => handleRemoveContent(pdf.id, "PDF")}
+                                            onClick={() => handleRemoveContent(pdf.content_id, "PDF")}
                                             className="text-gray-500 hover:text-gray-800"
                                         >
                                             <TrashIcon className="w-4 h-4" />
