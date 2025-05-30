@@ -1,35 +1,38 @@
 // All "black" color classes changed to "gray-800"
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+import SectionContent from "./SectionContent";
 import {
   PencilSquareIcon,
   TrashIcon,
   PlusIcon,
   VideoCameraIcon,
-  DocumentIcon,
+  DocumentTextIcon,
   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
+import DisplayAssignments from "./DisplayAssignments";
+import StudentProgressReport from "./StudentProgressReport";
 
 function ViewCourse() {
   const { user } = useAuth();
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const [course, setCourse] = useState( state?.course );
+  const [course, setCourse] = useState(state?.course);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-  course_id: '',
-  courseTitle: '',
-  courseDescription: '',
-  instructorName: '',
-  dept: '',
-  duration: '0',
-  credit: '0',
-  isActive: true
+    course_id: '',
+    courseTitle: '',
+    courseDescription: '',
+    instructorName: '',
+    dept: '',
+    duration: '0',
+    credit: '0',
+    isActive: true
   });
 
   const [newSection, setNewSection] = useState({
@@ -39,244 +42,214 @@ function ViewCourse() {
 
   const [editingSectionId, setEditingSectionId] = useState(null);
   const [sectionEditData, setSectionEditData] = useState({
+    section_id: null,
     sectionTitle: "",
     sectionDesc: "",
+    createdAt: null,
+    updatedAt: null,
+    course: { course_id: null }
   });
 
-  const [showVideoForm, setShowVideoForm] = useState(false);
-  const [showPdfForm, setShowPdfForm] = useState(false);
   const [currentSectionId, setCurrentSectionId] = useState(null);
-  const [pdfFile, setPdfFile] = useState(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [showSection, setShowSection] = useState(true);
   const [showAssignments, setShowAssignments] = useState(false);
+  const [courseSection, setCourseSection] = useState([]);
   const [loading, setLoading] = useState(!state?.course);
+  const [showReport, setShowReport] = useState(false);
   const [error, setError] = useState(null);
+  const isInitialRender = useRef(false);
+  // after updating course details re-render
+  
+  // Initial fetch for course details
+  useEffect(() => {
+    const fetchSection = async () => {
+      try {
+        const sectionResponse = await axios.get(`http://localhost:8080/api/course/section/details?id=${course.course_id}`);
 
-  // const fetchCourseDetails = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await axios.get(`http://localhost:8080/api/course/details?id=${course_id}`);
-  //       setCourse(response.data);
-  //       console.log("resoponse.data ",response.data)
-      
-  //   } catch (err) {
-  //     setError(err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+        const sections = Array.isArray(sectionResponse.data)
+          ? sectionResponse.data
+          : [sectionResponse.data];
 
-  //  useEffect(() => {
-  //   if (course_id && !course) {
-  //     fetchCourseDetails();
-  //   }
-  // }, [course.course_id]);
+        setCourseSection(sections); // Update state
 
-const handleEditCourse = () => {
-  setEditData({
-    course_id: course.course_id,
-    courseTitle: course.courseTitle || '',
-    courseDescription: course.courseDescription || '',
-    instructorName: course.instructorName || '',
-    dept: course.dept || availableDepartments[0],
-    duration: course.duration?.toString() || '0',
-    credit: course.credit?.toString() || '0',
-    isActive: course.isActive !== undefined ? course.isActive : true
-  });
-  setIsEditing(true);
-};
-
-
+      } catch (error) {
+        console.error("Error fetching section:", error);
+      }
+    }
+    fetchSection()
+  }, [courseSection])
+ 
+  // course editing 
+  const handleEditCourse = async () => {
+    setEditData({
+      course_id: course.course_id,
+      courseTitle: course.courseTitle || '',
+      courseDescription: course.courseDescription || '',
+      instructorName: course.instructorName || '',
+      dept: course.dept || availableDepartments[0],
+      duration: course.duration?.toString() || '0',
+      credit: course.credit?.toString() || '0',
+      isActive: course.isActive !== undefined ? course.isActive : true
+    });
+    setIsEditing(true);
+    // going to form -> then handlesaveCourse
+  };
   const isEnrolled =
     user.role === "teacher" || user.role === "admin"
       ? true
       : localStorage.getItem(`enrolled_${id}`) === "true";
+  // save updated course data
+  const handleSaveCourse = async (e) => {
+    e.preventDefault();
 
-  
-const handleSaveCourse = async (e) => {
-  e.preventDefault();
-  
-  try {
-    // Prepare the data for API request
-    const updatedCourse = {
-      ...editData,
-      duration: parseInt(editData.duration),
-      credit: parseInt(editData.credit),
-    };
+    try {
+      // Prepare the data for API request
+      const updatedCourse = {
+        ...editData,
+        duration: parseInt(editData.duration),
+        credit: parseInt(editData.credit),
+      };
 
-    // Make PUT request to update the course
-    const response = await axios.put(
-      "http://localhost:8080/api/course/update",
-      updatedCourse
-    );
+      // Make PUT request to update the course
+      const response = await axios.put(
+        "http://localhost:8080/api/course/update",
+        updatedCourse
+      );
 
-    // Update local state only after successful API response
-    setCourse({
-      ...course,
-      ...updatedCourse,
-      updatedAt: new Date().toISOString(), // Better to use ISO format
-    });
-    
-    setIsEditing(false);
-    
-    // Optional: Show success message
-    console.log("Course updated successfully:", response.data);
-    
-  } catch (error) {
-    console.error("Error updating course:", error);
-    alert("Failed to update course. Please try again.");
-  }
-};
+      // Update local state only after successful API response
+      setCourse({
+        ...course,
+        ...updatedCourse,
+        updatedAt: new Date().toISOString(), // Better to use ISO format
+      });
 
-  const handleAddSection = () => {
-    const currentSections = course.sections || [];
-    const newSectionId =
-      currentSections.length > 0
-        ? Math.max(...currentSections.map((s) => s.id), 0) + 1
-        : 1;
+      setIsEditing(false);
 
-    setCourse({
-      ...course,
-      sections: [
-        ...currentSections,
+      // Optional: Show success message
+      console.log("Course updated successfully:", response.data);
+
+    } catch (error) {
+      console.error("Error updating course:", error);
+      alert("Failed to update course. Please try again.");
+    }
+  };
+  // handle add new section
+  const handleAddSection = async () => {
+    try {
+      // Prepare the request body
+      const requestBody = {
+        sectionTitle: newSection.sectionTitle,
+        sectionDesc: newSection.sectionDesc,
+        course: { course_id: course.course_id } // Or use course.course_id if available
+      };
+      // Make API call to add section
+      const response = await axios.post(
+        'http://localhost:8080/api/course/section/add',
+        requestBody
+      );
+      // If the API returns the newly created section
+      const createdSection = response.data;
+      // Update local state with the new section
+      setCourseSection(prevSections => [
+        ...prevSections,
         {
-          section_id: newSection.sectionId,
-          sectionTitle: newSection.sectionTitle,
-          sectionDesc: newSection.sectionDesc,
-          createdAt : newSection.createdAt,
-          updatedAt : newSection.updatedAt,
-          videos: [],
-          pdfs: [],
-          assignments: [],
-        },
-      ],
-    });
-    setNewSection({ sectionTitle: "", content: "" });
-    setShowAddSection(false);
+          section_id: createdSection.section_id, // Use server ID or fallback
+          sectionTitle: createdSection.sectionTitle,
+          sectionDesc: createdSection.sectionDesc,
+          createdAt: createdSection.createdAt || new Date().toISOString(),
+          updatedAt: createdSection.updatedAt || new Date().toISOString(),
+        }
+      ]);
+      // Reset form
+      setNewSection({ sectionTitle: "", sectionDesc: "" });
+      setShowAddSection(false);
+
+    } catch (error) {
+      console.error("Error adding section:", error);
+    }
   };
 
   const handleEditSection = (section) => {
-    setEditingSectionId(section.id);
+    setEditingSectionId(section.section_id); // for open editing fields
     setSectionEditData({
+      section_id: section.section_id, // Crucial: Store the section's ID
       sectionTitle: section.sectionTitle,
       sectionDesc: section.sectionDesc,
+      createdAt: section.createdAt, // Preserve the original creation timestamp
+      updatedAt: section.updatedAt, // Preserve the original update timestamp
+      course: { course_id: course.course_id } // Link to the current course's ID
     });
   };
+  // handle save section - called by handleeditsection
+  const handleSaveSection = async (e) => {
+    e.preventDefault();
 
-  const handleSaveSection = (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    setCourse({
-      ...course,
-      sections: course.sections.map((section) =>
-        section.id === editingSectionId
-          ? {
-              ...section,
-              sectionTitle: sectionEditData.sectionTitle,
-              sectionDesc: sectionEditData.sectionDesc,
-            }
-          : section
-      ),      
-    });
-    setEditingSectionId(null);
+    try {
+      // Get the current timestamp for updatedAt
+      const now = new Date().toISOString();
+
+      const payload = {
+        section_id: sectionEditData.section_id, // Use the ID from sectionEditData state
+        sectionTitle: sectionEditData.sectionTitle,
+        sectionDesc: sectionEditData.sectionDesc,
+        createdAt: sectionEditData.createdAt,
+        updatedAt: now, // Set updatedAt to the current time
+        course: { course_id: course.course_id } // Ensure the course ID is correctly passed
+      };
+
+      const response = await axios.put("http://localhost:8080/api/course/section/update", payload);
+
+      // Reset editing state and clear sectionEditData
+      setEditingSectionId(null);
+      setSectionEditData({
+        section_id: null,
+        sectionTitle: "",
+        sectionDesc: "",
+        createdAt: null,
+        updatedAt: null,
+        course: { course_id: null }
+      });
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      console.error("Failed to update section:", err);
+      setError(err.response?.data?.message || err.message || "Failed to update section");
+    }
   };
-
-  const handleRemoveSection = (sectionId) => {
+  // handle delete / remove section (delete icon)
+  const handleRemoveSection = async (sectionId) => {
     if (window.confirm("Are you sure you want to delete this section?")) {
-      setCourse({
-        ...course,
-        sections: course.sections.filter((s) => s.id !== sectionId),
-      });
+      try {
+        const requestBody = String(sectionId);
+        // Make API call to delete section
+        await axios.delete(`http://localhost:8080/api/course/section/delete`, {
+          data: requestBody,
+          headers: {
+            'Content-Type': 'text/plain' // Explicit content type for String
+          }
+        });
+
+        // Update local state only after successful API response
+        setCourseSection(prevSections =>
+          prevSections.filter(s => s.section_id !== sectionId)
+        );
+
+        // Optional: Show success message
+        console.log("Section deleted successfully");
+
+      } catch (error) {
+        console.error("Error while deleting section:", error);
+
+        // Show error to user (you could use a toast/notification)
+        if (axios.isAxiosError(error)) {
+          alert(error.response?.data?.message || "Failed to delete section");
+        } else {
+          alert("An unexpected error occurred");
+        }
+      }
     }
   };
 
-  const handleAddVideo = (sectionId) => {
-    setCurrentSectionId(sectionId);
-    setShowVideoForm(true);
-  };
-
-  const handleVideoSubmit = (e) => {
-    e.preventDefault();
-    const videoUrl = e.target.videoUrl.value;
-    const videoTitle = e.target.videoTitle.value || "Untitled Video";
-
-    setCourse({
-      ...course,
-      sections: course.sections.map((section) =>
-        section.id === currentSectionId
-          ? {
-              ...section,
-              videos: [...section.videos, { url: videoUrl, title: videoTitle }],
-            }
-          : section
-      ),
-    });
-    setShowVideoForm(false);
-  };
-
-  const handleRemoveVideo = (sectionId, videoIndex) => {
-    setCourse({
-      ...course,
-      sections: course.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              videos: section.videos.filter((_, index) => index !== videoIndex),
-            }
-          : section
-      ),
-    });
-  };
-
-  const handleAddPdf = (sectionId) => {
-    setCurrentSectionId(sectionId);
-    setShowPdfForm(true);
-  };
-
-  const handlePdfSubmit = (e) => {
-    e.preventDefault();
-    if (pdfFile) {
-      const pdfUrl = URL.createObjectURL(pdfFile);
-      const pdfTitle = e.target.pdfTitle.value || "Untitled Document";
-
-      setCourse({
-        ...course,
-        sections: course.sections.map((section) =>
-          section.id === currentSectionId
-            ? {
-                ...section,
-                pdfs: [...section.pdfs, { url: pdfUrl, title: pdfTitle }],
-              }
-            : section
-        ),
-      });
-      setShowPdfForm(false);
-      setPdfFile(null);
-    }
-  };
-
-  const handleRemovePdf = (sectionId, pdfIndex) => {
-    setCourse({
-      ...course,
-      sections: course.sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              pdfs: section.pdfs.filter((_, index) => index !== pdfIndex),
-            }
-          : section
-      ),
-    });
-  };
-
-  const handlePdfFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type === "application/pdf") {
-      setPdfFile(file);
-    } else {
-      alert("Please select a PDF file");
-    }
-  };
 
   if (!course) return <div className="text-center py-10">Loading course...</div>;
 
@@ -391,14 +364,6 @@ const handleSaveCourse = async (e) => {
                 alt={course.courseTitle}
                 className="w-full rounded-xl shadow-md border border-gray-200"
               />
-              {/* {(user.role === "teacher" || user.role === "admin") && (
-                <button
-                  onClick={handleEditCourse}
-                  className="absolute top-2 right-2 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-900 z-10 shadow"
-                >
-                  <PencilSquareIcon className="w-5 h-5" />
-                </button>
-              )} */}
             </div>
             <div className="md:w-2/3">
               <h1 className="text-4xl font-extrabold mb-3 text-gray-800">{course.courseTitle}</h1>
@@ -435,14 +400,16 @@ const handleSaveCourse = async (e) => {
             </div>
           </div>
 
-          {/* Toggle between Sections and Assignments */}
+          {/* Toggle between Sections and Assignments and View report button */}
           <div className="flex mb-4 border-b border-gray-200">
             <button
               onClick={() => {
                 setShowSection(true);
                 setShowAssignments(false);
+                setShowReport(false);
               }}
-              className={`px-4 py-2 font-medium ${showSection ? "text-gray-800 border-b-2 border-gray-800" : "text-gray-500"}`}
+              className={`px-4 py-2 font-medium ${showSection ? "text-gray-800 border-b-2 border-gray-800" : "text-gray-500"
+                }`}
             >
               Sections
             </button>
@@ -450,25 +417,35 @@ const handleSaveCourse = async (e) => {
               onClick={() => {
                 setShowSection(false);
                 setShowAssignments(true);
+                setShowReport(false);
               }}
-              className={`px-4 py-2 font-medium ${showAssignments ? "text-gray-800 border-b-2 border-gray-800" : "text-gray-500"}`}
+              className={`px-4 py-2 font-medium ${showAssignments ? "text-gray-800 border-b-2 border-gray-800" : "text-gray-500"
+                }`}
             >
               Assignments
             </button>
+            {/* Add this button for teachers only */}
+            {user.role === 'teacher' && (
+              <button
+                onClick={() => {
+                  setShowSection(false);
+                  setShowAssignments(false);
+                  setShowReport(true);
+                }}
+                className={`px-4 py-2 font-medium ${showReport ? "text-gray-800 border-b-2 border-gray-800" : "text-gray-500"
+                  }`}
+              >
+                View Report
+              </button>
+            )}
           </div>
-
+          {/* handle add section */}
           {showSection && (
             <>
               {(isEnrolled || user.role === "teacher" || user.role === "admin") && (
                 <div className="mt-4">
                   {(user.role === "teacher" || user.role === "admin") && (
                     <div className="mb-4">
-                      <button
-                        onClick={() => setShowAddSection((prev) => !prev)}
-                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-semibold"
-                      >
-                        {showAddSection ? "Hide Add Section" : "Add New Section"}
-                      </button>
                       {showAddSection && (
                         <div className="mt-4 p-6 bg-gray-100 rounded-xl shadow">
                           <h3 className="font-semibold mb-2 text-gray-800">Add New Section</h3>
@@ -493,7 +470,7 @@ const handleSaveCourse = async (e) => {
                             />
                             <button
                               onClick={handleAddSection}
-                              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold"
+                              className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold cursor-pointer"
                               disabled={!newSection.sectionTitle}
                             >
                               Add Section
@@ -503,13 +480,13 @@ const handleSaveCourse = async (e) => {
                       )}
                     </div>
                   )}
-
+                  {/* section view */}
                   {(!showAddSection || user.role === "student") && (
                     <div className="space-y-6">
-                      {course.sections && course.sections.length > 0 ? (
-                        course.sections.map((section) => (
+                      {courseSection.length > 0 ? (
+                        courseSection.map((section) => (
                           <div
-                            key={section.id}
+                            key={section.section_id}
                             className="border border-gray-200 rounded-xl shadow bg-white overflow-hidden"
                           >
                             <div className="bg-gray-100 px-6 py-4 flex justify-between items-center">
@@ -521,7 +498,7 @@ const handleSaveCourse = async (e) => {
                                     onChange={(e) =>
                                       setSectionEditData({
                                         ...sectionEditData,
-                                        courseTitle: e.target.value,
+                                        sectionTitle: e.target.value,
                                       })
                                     }
                                     className="px-3 py-1 border border-gray-200 rounded-lg"
@@ -534,7 +511,7 @@ const handleSaveCourse = async (e) => {
                                 )}
                                 {(user.role === "teacher" || user.role === "admin") && (
                                   <div className="flex gap-1">
-                                    {editingSectionId === section.id ? (
+                                    {editingSectionId === section.section_id ? (
                                       <>
                                         <button
                                           onClick={handleSaveSection}
@@ -555,13 +532,13 @@ const handleSaveCourse = async (e) => {
                                           onClick={() => handleEditSection(section)}
                                           className="text-gray-900 hover:text-gray-800"
                                         >
-                                          <PencilSquareIcon className="w-5 h-5" />
+                                          <PencilSquareIcon className="w-5 h-5 cursor-pointer" />
                                         </button>
                                         <button
-                                          onClick={() => handleRemoveSection(section.id)}
+                                          onClick={() => handleRemoveSection(section.section_id)}
                                           className="text-gray-500 hover:text-gray-800"
                                         >
-                                          <TrashIcon className="w-5 h-5" />
+                                          <TrashIcon className="w-5 h-5 cursor-pointer " />
                                         </button>
                                       </>
                                     )}
@@ -570,129 +547,23 @@ const handleSaveCourse = async (e) => {
                               </div>
                             </div>
                             <div className="p-6">
-                              {editingSectionId === section.id ? (
+                              {editingSectionId === section.section_id ? (
                                 <textarea
-                                  value={sectionEditData.content}
+                                  value={sectionEditData.sectionDesc}
                                   onChange={(e) =>
                                     setSectionEditData({
                                       ...sectionEditData,
-                                      content: e.target.value,
+                                      sectionDesc: e.target.value,
                                     })
                                   }
                                   className="w-full px-4 py-2 border border-gray-200 rounded-lg mb-4"
                                   rows="4"
                                 />
                               ) : (
-                                <p className="mb-4 text-gray-800">{section.content}</p>
+                                <p className="mb-4 text-gray-800">{section.sectionDesc}</p>
                               )}
-
-                              <div className="mb-6">
-                                <div className="flex justify-between items-center mb-2">
-                                  <h4 className="font-semibold flex items-center gap-2 text-gray-900">
-                                    <VideoCameraIcon className="w-5 h-5 text-gray-800" />
-                                    Video Lectures
-                                  </h4>
-                                  {(user.role === "teacher" || user.role === "admin") && (
-                                    <button
-                                      onClick={() => handleAddVideo(section.id)}
-                                      className="flex items-center gap-1 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg hover:bg-gray-900 font-semibold"
-                                    >
-                                      <PlusIcon className="w-4 h-4" />
-                                      Add Video
-                                    </button>
-                                  )}
-                                </div>
-                                {section.videos && section.videos.length > 0 ? (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {section.videos.map((video, index) => (
-                                      <div
-                                        key={index}
-                                        className="bg-gray-100 p-4 rounded-lg relative shadow"
-                                      >
-                                        <div className="flex justify-between items-start mb-2">
-                                          <h5 className="font-medium text-gray-800">{video.title}</h5>
-                                          {(user.role === "teacher" ||
-                                            user.role === "admin") && (
-                                            <button
-                                              onClick={() =>
-                                                handleRemoveVideo(section.id, index)
-                                              }
-                                              className="text-gray-500 hover:text-gray-800"
-                                            >
-                                              <TrashIcon className="w-4 h-4" />
-                                            </button>
-                                          )}
-                                        </div>
-                                        <div className="aspect-w-16 aspect-h-9">
-                                          <iframe
-                                            src={video.url}
-                                            className="w-full h-48 rounded-lg border border-gray-200"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                          ></iframe>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-gray-400">No videos added yet</p>
-                                )}
-                              </div>
-
-                              <div className="mb-6">
-                                <div className="flex justify-between items-center mb-2">
-                                  <h4 className="font-semibold flex items-center gap-2 text-gray-900">
-                                    <DocumentIcon className="w-5 h-5 text-gray-800" />
-                                    Study Materials
-                                  </h4>
-                                  {(user.role === "teacher" || user.role === "admin") && (
-                                    <button
-                                      onClick={() => handleAddPdf(section.id)}
-                                      className="flex items-center gap-1 px-3 py-1 bg-gray-800 text-white text-sm rounded-lg hover:bg-gray-900 font-semibold"
-                                    >
-                                      <PlusIcon className="w-4 h-4" />
-                                      Add PDF
-                                    </button>
-                                  )}
-                                </div>
-                                {section.pdfs && section.pdfs.length > 0 ? (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {section.pdfs.map((pdf, index) => (
-                                      <div
-                                        key={index}
-                                        className="bg-gray-100 p-4 rounded-lg shadow"
-                                      >
-                                        <div className="flex justify-between items-start mb-2">
-                                          <h5 className="font-medium text-gray-800">{pdf.title}</h5>
-                                          {(user.role === "teacher" ||
-                                            user.role === "admin") && (
-                                            <button
-                                              onClick={() =>
-                                                handleRemovePdf(section.id, index)
-                                              }
-                                              className="text-gray-500 hover:text-gray-800"
-                                            >
-                                              <TrashIcon className="w-4 h-4" />
-                                            </button>
-                                          )}
-                                        </div>
-                                        <a
-                                          href={pdf.url}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="inline-block px-3 py-1 bg-gray-200 text-gray-900 rounded hover:bg-gray-300 font-medium"
-                                        >
-                                          View PDF
-                                        </a>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-gray-400">
-                                    No study materials added yet
-                                  </p>
-                                )}
-                              </div>
+                              {/* disply existing video / pdf */}
+                              <SectionContent key={section.section_id} section={section} user={user} />
                             </div>
                           </div>
                         ))
@@ -703,146 +574,18 @@ const handleSaveCourse = async (e) => {
                       )}
                     </div>
                   )}
-
-                  {showVideoForm && (
-                    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-900">Add Video Lecture</h2>
-                        <form onSubmit={handleVideoSubmit}>
-                          <div className="mb-5">
-                            <label className="block text-gray-800 mb-2 font-medium">
-                              Video Title
-                            </label>
-                            <input
-                              type="text"
-                              name="videoTitle"
-                              placeholder="Video title"
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                            />
-                          </div>
-                          <div className="mb-5">
-                            <label className="block text-gray-800 mb-2 font-medium">
-                              Video URL (YouTube, Vimeo, etc.)
-                            </label>
-                            <input
-                              type="url"
-                              name="videoUrl"
-                              placeholder="https://youtube.com/embed/..."
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                              required
-                            />
-                            <p className="text-sm text-gray-500 mt-1">
-                              Use embed URL format (e.g.,
-                              https://youtube.com/embed/videoID)
-                            </p>
-                          </div>
-                          <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setShowVideoForm(false)}
-                              className="px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium"
-                            >
-                              Add Video
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-
-                  {showPdfForm && (
-                    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-lg">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-900">Add Study Materials</h2>
-                        <form onSubmit={handlePdfSubmit}>
-                          <div className="mb-5">
-                            <label className="block text-gray-800 mb-2 font-medium">
-                              Document Title
-                            </label>
-                            <input
-                              type="text"
-                              name="pdfTitle"
-                              placeholder="Document title"
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                            />
-                          </div>
-                          <div className="mb-5">
-                            <label className="block text-gray-800 mb-2 font-medium">
-                              Upload PDF File
-                            </label>
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              onChange={handlePdfFileChange}
-                              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                              required
-                            />
-                          </div>
-                          <div className="flex justify-end gap-3">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowPdfForm(false);
-                                setPdfFile(null);
-                              }}
-                              className="px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={!pdfFile}
-                              className="px-5 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-medium disabled:opacity-50"
-                            >
-                              Upload PDF
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </>
           )}
 
           {showAssignments && (
+            <DisplayAssignments courseId={course.course_id} showAssignments={showAssignments} />
+          )}
+          {showReport && (
             <div className="mt-4">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">Assignments</h2>
-              {false ? (
-                <div className="space-y-4">
-                  {/* Sample assignment - replace with dynamic data */}
-                  <div className="border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-semibold text-lg">Assignment 1</h3>
-                      <span className="bg-gray-100 text-gray-900 px-2 py-1 rounded text-sm font-medium">
-                        Due: May 30
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mt-2">
-                      Complete the exercises in Chapter 3 and submit your solutions.
-                    </p>
-                    <div className="mt-4 flex justify-between items-center">
-                      <span className="text-sm text-gray-500">
-                        Submitted: No
-                      </span>
-                      <button className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900">
-                        Submit Assignment
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-10 text-gray-400">
-                  No assignments available
-                </div>
-              )}
+              {/* Report table component would go here */}
+              <StudentProgressReport />
             </div>
           )}
         </div>
@@ -850,6 +593,8 @@ const handleSaveCourse = async (e) => {
         {/* Right Side (Progress) */}
         <div className="w-full lg:w-[30%]">
           <div className="sticky top-24 space-y-4">
+
+            {(user.role === "student") && (
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <h2 className="text-xl font-bold mb-4 text-gray-800">Course Progress</h2>
               {(() => {
@@ -878,48 +623,29 @@ const handleSaveCourse = async (e) => {
                         ></div>
                       </div>
                     </div>
-                    <ul className="space-y-2">
-                      {course.sections && course.sections.length > 0 ? (
-                        course.sections.map((section, idx) => (
-                          <li
-                            key={section.id}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                              idx < completedSections
-                                ? "bg-gray-100 text-gray-800"
-                                : "bg-gray-50 text-gray-800"
-                            }`}
-                          >
-                            <span
-                              className={`w-3 h-3 rounded-full inline-block ${
-                                idx < completedSections
-                                  ? "bg-gray-800"
-                                  : "bg-gray-300"
-                              }`}
-                            ></span>
-                            <span className="truncate">{section.sectionTitle}</span>
-                          </li>
-                        ))
-                      ) : (
-                        <li className="text-gray-400 text-sm">No sections yet</li>
-                      )}
-                    </ul>
+
                   </>
                 );
               })()}
-            </div>
+            </div>)}
 
-            {/* Quick Actions */}
+            {/* Quick Actions / Handle add section and handle edit course details */}
             {(user.role === "teacher" || user.role === "admin") && (
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <h2 className="text-xl font-bold mb-4 text-gray-800">Quick Actions</h2>
                 <div className="space-y-3">
                   <button
-                    onClick={() => setShowAddSection(true)}
+                    onClick={() => setShowAddSection((prev) => !prev)}
                     className="w-full flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900"
                   >
                     <PlusIcon className="w-5 h-5" />
-                    Add New Section
+                    {showAddSection ? "Hide Add Section" : "Add New Section"}
                   </button>
+                  {/* <button
+                        onClick={() => setShowAddSection((prev) => !prev)}
+                        className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 font-semibold"
+                      >
+                  </button> */}
                   <button
                     onClick={handleEditCourse}
                     className="w-full flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900"

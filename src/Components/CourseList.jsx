@@ -276,14 +276,14 @@ const CourseList = () => {
                   {course.courseDescription || 'No description available'}
                 </p>
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                  <span>By {course.instructorName || 'Unknown Instructor'}</span>
+                  <span>By {course.instructorName.toUpperCase() || 'Unknown Instructor'}</span>
                   <span>{course.duration || 'N/A'} hours | {course.credit || '0'} credits</span>
                 </div>
               </div>
               {/* Expanded Description - Only shows for hovered card */}
               {hoverStates[course.course_id] && (
                 <div className="absolute inset-0 bg-white bg-opacity-95 flex flex-col justify-center items-center p-6 z-20 transition-all duration-300">
-                  {(course.instructorName === user.name) && 
+                  {(user.role==="teacher")&&(course.instructorName.toLowerCase() === user.name.toLowerCase()) && 
                   <button className="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 transition-colors  cursor-pointer"
                     onClick={()=>handleDeleteCourse(course.course_id)}
                   >
@@ -302,7 +302,7 @@ const CourseList = () => {
                     <p><strong>Credits:</strong> {course.credit || '0'}</p>
                     <p><strong>Created:</strong> {new Date(course.createdAt).toLocaleDateString()}</p>
                   </div>
-                  {(user.role === "teacher") && (course.instructorName === user.name) && (
+                  {(user.role === "teacher") && (course.instructorName.toLowerCase() === user.name.toLowerCase()) && (
                     <button
                       className="px-6 py-2 bg-gradient-to-r from-black to-gray-700 text-white rounded-full font-semibold shadow hover:from-gray-900 hover:to-gray-700 
                                 transition cursor-pointer"

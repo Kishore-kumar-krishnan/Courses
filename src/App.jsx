@@ -6,7 +6,6 @@ import CourseList from './Components/CourseList';
 import ErrorPage from "./Components/ErrorPage";
 import ViewCourse from "./Components/ViewCourse";
 import { AuthProvider } from './context/AuthContext';
-import Axi from "./Components/Axi";
 
 
 function App() {
@@ -15,7 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<CourseList />} />
         <Route path="/course/:id" element={<ViewCourse />} />
-        <Route path='/axi' element={<Axi></Axi>}/>
+
         <Route path="*" element={<ErrorPage/>}/>
       </Routes>
     </AuthProvider>

@@ -39,6 +39,7 @@ const CourseForm = ({
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    console.log("name:"+name,"Value"+value,"type"+type);
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -61,7 +62,6 @@ const CourseForm = ({
       alert('Please enter valid credits (must be positive number)');
       return;
     }
-    
     // Call parent save handler with properly formatted data
     onSave({
       ...formData,
@@ -119,9 +119,16 @@ const CourseForm = ({
             <input
               type='text'
               name="dept"
-              placeholder='Eg: CSE/IT/MECH/ECE'
+              placeholder='Eg:CSE/IT/MECH/ECE'
               value={formData.dept}
-              onChange={handleChange}
+                 onChange={(e) => {
+                handleChange({
+                  target: {
+                    name: e.target.name,
+                    value: e.target.value.toUpperCase()
+                  }
+                });
+              }}
               className="w-full px-3 py-2 border rounded"
             />
           </div>

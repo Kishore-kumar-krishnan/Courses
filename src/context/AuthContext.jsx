@@ -7,7 +7,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState({
     role: 'teacher',//"student" // Default role for testing
-    name: 'kamesh'
+    name: 'virat'
   });
 
   return (
