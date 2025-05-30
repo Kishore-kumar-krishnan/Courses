@@ -1,28 +1,49 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-    PencilSquareIcon,
     TrashIcon,
     PlusIcon,
     VideoCameraIcon,
     DocumentTextIcon,
-    ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 
-const SectionContent = ({ section, user }) => {
-    const [contents, setContents] = useState([]);
+interface Section {
+    section_id: number;
+    // Add other properties if needed
+}
+
+interface User {
+    role: string;
+    // Add other properties if needed
+}
+
+interface Content {
+    content_id: number;
+    contentType: string;
+    content: string;
+    // Add other properties if needed
+}
+
+interface SectionContentProps {
+    section: Section;
+    user: User;
+}
+
+const SectionContent = ({ section, user }: SectionContentProps) => {
+    const [contents, setContents] = useState<Content[]>([]);
     const [loading, setLoading] = useState(true);
     const [showVideoForm, setShowVideoForm] = useState(false);
     const [showPdfForm, setShowPdfForm] = useState(false);
-    const [currentSectionId, setCurrentSectionId] = useState(null);
+    const [currentSectionId, setCurrentSectionId] = useState<number | null>(null);
     const [videoUrl, setVideoUrl] = useState('');
     const [videoTitle, setVideoTitle] = useState('');
-    const [pdfUrl, setPdfUrl] = useState(''); // Assuming you'll have a URL for PDF as well if not a file upload
+    const [pdfUrl, setPdfUrl] = useState('');
     const [pdfTitle, setPdfTitle] = useState('');
 
     // Fetch content when section changes
     useEffect(() => {
         const fetchContent = async () => {
+            setLoading(true);
             try {
                 const response = await axios.get(
                     `http://localhost:8080/api/course/section/content/details?id=${section.section_id}`
@@ -38,32 +59,30 @@ const SectionContent = ({ section, user }) => {
         if (section.section_id) {
             fetchContent();
         }
-    }, [contents]);
+    }, [section.section_id]);
 
     // Handle opening video form
-    const handleAddVideo = (sectionId) => {
+    const handleAddVideo = (sectionId: number) => {
         setCurrentSectionId(sectionId);
         setShowVideoForm(true);
     };
 
     // Handle opening PDF form
-    const handleAddPdf = (sectionId) => {
+    const handleAddPdf = (sectionId: number) => {
         setCurrentSectionId(sectionId);
         setShowPdfForm(true);
     };
 
     // Unified content submission handler
-    const handleSubmitContent = async (contentType, contentUrl, contentTitle) => {
+    const handleSubmitContent = async (contentType: string, contentUrl: string, contentTitle: string) => {
         if (!window.confirm(`Are you sure you want to Add this ${contentType}?`)) return;
         try {
-            // Prepare request body matching your API spec
             const requestBody = {
                 contentType: contentType.toUpperCase(),
                 content: contentUrl,
                 section: { section_id: currentSectionId }
             };
 
-            // Make API call
             await axios.post(
                 'http://localhost:8080/api/course/section/content/add',
                 requestBody
@@ -78,27 +97,26 @@ const SectionContent = ({ section, user }) => {
             // Close form and reset
             setShowVideoForm(false);
             setShowPdfForm(false);
-
-            // Show success message
-
+            setVideoUrl('');
+            setVideoTitle('');
+            setPdfUrl('');
+            setPdfTitle('');
         } catch (error) {
             console.error(`Error adding ${contentType}:`, error);
         }
     };
 
     // Remove Content Handler
-    const handleRemoveContent = async (contentId, contentType) => {
+    const handleRemoveContent = async (contentId: number, contentType: string) => {
         if (!window.confirm(`Are you sure you want to delete this ${contentType} ? `)) return;
 
         try {
-            await axios.delete(`http://localhost:8080/api/course/section/content/delete`,{
+            await axios.delete(`http://localhost:8080/api/course/section/content/delete`, {
                 data: contentId
-            } 
-            );
+            });
 
-            // Update local state by filtering out the deleted content
-            setContents(prev => prev.filter(c => c.id !== contentId));
-        } catch (error) {
+            setContents(prev => prev.filter(c => c.content_id !== contentId));
+        } catch (error: any) {
             console.error(`Error deleting ${contentType}:`, error);
             alert(error.response?.data?.message || `Failed to delete ${contentType}`);
         }
@@ -106,10 +124,8 @@ const SectionContent = ({ section, user }) => {
 
     const videos = contents.filter(c => c.contentType === "VIDEO");
     const pdfs = contents.filter(c => c.contentType === "PDF");
-   
-    if (loading) return <div>Loading content...</div>;
 
-    // Filter contents by type
+    if (loading) return <div>Loading content...</div>;
 
     return (
         <div className="space-y-8">
@@ -134,10 +150,10 @@ const SectionContent = ({ section, user }) => {
                 {videos.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {videos.map((video, index) => (
-                            <div key={index} className="bg-gray-100 p-4 rounded-lg relative shadow">
+                            <div key={video.content_id} className="bg-gray-100 p-4 rounded-lg relative shadow">
                                 <div className="flex justify-between items-start mb-2">
                                     <h5 className="font-medium text-gray-800">
-                                        {`${video.contentType} ${index+1}` || 'Untitled Video'}
+                                        {`${video.contentType} ${index + 1}` || 'Untitled Video'}
                                     </h5>
                                     {(user.role === "teacher" || user.role === "admin") && (
                                         <button
@@ -185,10 +201,10 @@ const SectionContent = ({ section, user }) => {
                 {pdfs.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {pdfs.map((pdf, index) => (
-                            <div key={index} className="bg-gray-100 p-4 rounded-lg relative shadow">
+                            <div key={pdf.content_id} className="bg-gray-100 p-4 rounded-lg relative shadow">
                                 <div className="flex justify-between items-start mb-2">
                                     <h5 className="font-medium text-gray-800">
-                                        {`${pdf.contentType} ${index+1}` || 'Untitled PDF'}
+                                        {`${pdf.contentType} ${index + 1}` || 'Untitled PDF'}
                                     </h5>
                                     {(user.role === "teacher" || user.role === "admin") && (
                                         <button

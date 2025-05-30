@@ -5,7 +5,21 @@ import CourseForm from "./CourseForm";
 import axios from "axios";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-const CourseList = () => {
+type Course = {
+  course_id: number;
+  courseTitle: string;
+  courseDescription: string;
+  instructorName: string;
+  dept: string;
+  isActive: boolean;
+  duration: number;
+  credit: number;
+  createdAt: string;
+  updatedAt: string;
+  imageUrl: string;
+};
+
+const CourseList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showCourseForm, setShowCourseForm] = useState(false);
@@ -13,20 +27,18 @@ const CourseList = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [courses, setCourses] = useState([]);
-  const [categories, setCategories] = useState([""]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [hoverStates, setHoverStates] = useState({});
+  const [error, setError] = useState<string | null>(null);
+  const [hoverStates, setHoverStates] = useState<Record<number, boolean>>({});
 
-  
-  // Track hover state for each card individually
-  const handleMouseEnter = (courseId) => {
-    setHoverStates(prev => ({ ...prev, [courseId]: true }));
+  const handleMouseEnter = (courseId: number) => {
+    setHoverStates((prev) => ({ ...prev, [courseId]: true }));
   };
 
-  const handleMouseLeave = (courseId) => {
-    setHoverStates(prev => ({ ...prev, [courseId]: false }));
+  const handleMouseLeave = (courseId: number) => {
+    setHoverStates((prev) => ({ ...prev, [courseId]: false }));
   };
 
   useEffect(() => {
@@ -34,13 +46,14 @@ const CourseList = () => {
       try {
         const response = await axios.get("http://localhost:8080/api/course/details");
         setCourses(response.data);
-        
-        const uniqueCategories = ["All", ...new Set(
-          response.data.map(course => course.dept).filter(Boolean)
-        )];
-        setCategories(uniqueCategories);
 
-      } catch (err) {
+        const uniqueCategories = ["All", ...Array.from(
+          new Set(
+            response.data.map((course: Course) => course.dept).filter(Boolean)
+          )
+        )] as string[];
+        setCategories(uniqueCategories);
+      } catch (err: any) {
         setError(err.response?.data?.message || err.message || "Failed to fetch courses");
       } finally {
         setLoading(false);
@@ -48,8 +61,7 @@ const CourseList = () => {
     };
 
     fetchCourses();
-  }, [courses,hoverStates]);
-  // here courses are set using fetchcourse method
+  }, []);
 
   const filteredCourses =
     selectedCategory === "All"
@@ -57,20 +69,20 @@ const CourseList = () => {
       : courses.filter((c) => c.dept === selectedCategory);
 
   const searchFilteredCourses = filteredCourses.filter((course) =>
-    course.courseTitle?.toLowerCase()?.includes(search?.toLowerCase() || '')
+    course.courseTitle?.toLowerCase()?.includes(search?.toLowerCase() || "")
   );
 
   const suggestions = search
     ? filteredCourses
         .filter((course) =>
-          course.courseTitle?.toLowerCase()?.includes(search?.toLowerCase() || '')
+          course.courseTitle?.toLowerCase()?.includes(search?.toLowerCase() || "")
         )
         .slice(0, 5)
     : [];
 
   const handleShowMore = () => setVisibleCount((prev) => prev + 8);
 
-  const handleViewCourse = (course) => {
+  const handleViewCourse = (course: Course) => {
     navigate(`/course/${course.course_id}`, {
       state: {
         course: course,
@@ -78,13 +90,13 @@ const CourseList = () => {
     });
   };
 
-  const handleSearchKeyDown = (e) => {
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       setShowSuggestions(false);
     }
   };
 
-  const handleAddCourse = async (newCourseData) => {
+  const handleAddCourse = async (newCourseData: any) => {
     try {
       const response = await axios.post(
         "http://localhost:8080/api/course/add",
@@ -95,58 +107,56 @@ const CourseList = () => {
           dept: newCourseData.dept,
           isActive: true,
           duration: parseInt(newCourseData.duration),
-          credit: parseInt(newCourseData.credit)
+          credit: parseInt(newCourseData.credit),
+          imageUrl:newCourseData.imageUrl,
         },
         {
           headers: {
-            'Content-Type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
-      
-      const newCourse = {
-      ...response.data,
-      // Add any additional fields that might be missing from the response
-      course_id: response.data.course_id || Math.max(...courses.map(c => c.course_id), 0) + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      courseTitle: newCourseData.courseTitle,
-      courseDescription: newCourseData.courseDescription,
-      instructorName: newCourseData.instructorName,
-      dept: newCourseData.dept,
-      isActive: true,
-      duration: parseInt(newCourseData.duration),
-      credit: parseInt(newCourseData.credit)
 
-    };
+      const newCourse: Course = {
+        ...response.data,
+        course_id: response.data.course_id || Math.max(0, ...courses.map((c) => c.course_id)) + 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        courseTitle: newCourseData.courseTitle,
+        courseDescription: newCourseData.courseDescription,
+        instructorName: newCourseData.instructorName,
+        dept: newCourseData.dept,
+        isActive: true,
+        duration: parseInt(newCourseData.duration),
+        credit: parseInt(newCourseData.credit),
+        imageUrl:newCourseData.imageUrl,
+      };
 
-    // Update both courses and filteredCourses state
-    setCourses(prevCourses => [newCourse, ...prevCourses]);
-    
-    // If you're using a separate filteredCourses state:    
-    setShowCourseForm(false);
-    
-    if (!categories.includes(newCourseData.dept)) {
-      setCategories(prevCategories => [...prevCategories, newCourseData.dept]);
-    }
+      setCourses((prevCourses) => [newCourse, ...prevCourses]);
+      setShowCourseForm(false);
 
-    // Optional: Show success message
-    alert('Course added successfully!');
-    } catch (err) {
+      if (!categories.includes(newCourseData.dept)) {
+        setCategories((prevCategories) => [...prevCategories, newCourseData.dept]);
+      }
+
+      alert("Course added successfully!");
+    } catch (err: any) {
       setError(err.response?.data?.message || err.message || "Failed to add course");
     }
   };
-  // delete course
-  const handleDeleteCourse = async (course_id) => {
-    console.log("course id from delete icon "+ course_id);
-    if (window.confirm("Are you sure you want to delete this course? This action cannot be undone.")) {
+
+  const handleDeleteCourse = async (course_id: number) => {
+    if (
+      window.confirm("Are you sure you want to delete this course? This action cannot be undone.")
+    ) {
       try {
-        await axios.delete(`http://localhost:8080/api/course/delete?course_id=${course_id}`)
+        await axios.delete(`http://localhost:8080/api/course/delete?course_id=${course_id}`);
+        setCourses((prev) => prev.filter((c) => c.course_id !== course_id));
       } catch (error) {
         console.log("Error while deleting course by : ", error);
       }
     }
-  }
+  };
 
   if (loading) {
     return <div className="text-center py-8">Loading courses...</div>;
@@ -206,7 +216,7 @@ const CourseList = () => {
         <div className="text-center mb-8">
           <button
             onClick={() => setShowCourseForm(true)}
-            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+            className="px-6 py-3 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-700 transition"
           >
             Add New Course
           </button>
@@ -260,49 +270,66 @@ const CourseList = () => {
             >
               <div className="h-40 overflow-hidden relative">
                 <img
-                  src={`https://source.unsplash.com/400x250/?${course.dept || 'course'},${course.course_id}`}
+                  src={course.imageUrl}
                   alt={course.courseTitle}
                   className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                 />
                 <span className="absolute top-3 left-3 bg-black bg-opacity-85 text-white text-xs px-3 py-1 rounded-full font-medium shadow">
-                  {course.dept || 'General'}
+                  {course.dept || "General"}
                 </span>
               </div>
               <div className="p-5 flex-1 flex flex-col">
                 <h3 className="mb-2 text-lg font-bold text-black">
-                  {course.courseTitle || 'Untitled Course'}
+                  {course.courseTitle || "Untitled Course"}
                 </h3>
                 <p className="text-sm text-gray-600 flex-1">
-                  {course.courseDescription || 'No description available'}
+                  {course.courseDescription || "No description available"}
                 </p>
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                  <span>By {course.instructorName.toUpperCase() || 'Unknown Instructor'}</span>
-                  <span>{course.duration || 'N/A'} hours | {course.credit || '0'} credits</span>
+                  <span>
+                    By {course.instructorName?.toUpperCase() || "Unknown Instructor"}
+                  </span>
+                  <span>
+                    {course.duration || "N/A"} hours | {course.credit || "0"} credits
+                  </span>
                 </div>
               </div>
               {/* Expanded Description - Only shows for hovered card */}
               {hoverStates[course.course_id] && (
                 <div className="absolute inset-0 bg-white bg-opacity-95 flex flex-col justify-center items-center p-6 z-20 transition-all duration-300">
-                  {(user.role==="teacher")&&(course.instructorName.toLowerCase() === user.name.toLowerCase()) && 
-                  <button className="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 transition-colors  cursor-pointer"
-                    onClick={()=>handleDeleteCourse(course.course_id)}
-                  >
-                    <TrashIcon className="w-5 h-5 active:bg-gray-500" />
-                  </button>
-                  }
+                  {user.role === "teacher" &&
+                    course.instructorName.toLowerCase() === user.name.toLowerCase() && (
+                      <button
+                        className="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 transition-colors  cursor-pointer"
+                        onClick={() => handleDeleteCourse(course.course_id)}
+                      >
+                        <TrashIcon className="w-5 h-5 active:bg-gray-500" />
+                      </button>
+                    )}
                   <h3 className="text-lg font-bold mb-2 text-black">
-                    {course.courseTitle || 'Untitled Course'}
+                    {course.courseTitle || "Untitled Course"}
                   </h3>
                   <p className="text-sm text-gray-700 mb-2">
-                    {course.courseDescription || 'No detailed description available'}
+                    {course.courseDescription || "No detailed description available"}
                   </p>
                   <div className="text-sm mb-4 text-left w-full px-4">
-                    <p><strong>Department:</strong> {course.dept || 'N/A'}</p>
-                    <p><strong>Duration:</strong> {course.duration || 'N/A'} hours</p>
-                    <p><strong>Credits:</strong> {course.credit || '0'}</p>
-                    <p><strong>Created:</strong> {new Date(course.createdAt).toLocaleDateString()}</p>
+                    <p>
+                      <strong>Department:</strong> {course.dept || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Duration:</strong> {course.duration || "N/A"} hours
+                    </p>
+                    <p>
+                      <strong>Credits:</strong> {course.credit || "0"}
+                    </p>
+                    <p>
+                      <strong>Created:</strong>{" "}
+                      {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : "N/A"}
+                    </p>
                   </div>
-                  {(user.role === "teacher") && (course.instructorName.toLowerCase() === user.name.toLowerCase()) && (
+                  {(user.role === "teacher" &&
+                    course.instructorName.toLowerCase() === user.name.toLowerCase()) ||
+                  user.role === "student" ? (
                     <button
                       className="px-6 py-2 bg-gradient-to-r from-black to-gray-700 text-white rounded-full font-semibold shadow hover:from-gray-900 hover:to-gray-700 
                                 transition cursor-pointer"
@@ -310,16 +337,7 @@ const CourseList = () => {
                     >
                       View Course
                     </button>
-                  )}
-                  {(user.role === "student") && (
-                    <button
-                      className="px-6 py-2 bg-gradient-to-r from-black to-gray-700 text-white rounded-full font-semibold shadow hover:from-gray-900 hover:to-gray-700 
-                                transition cursor-pointer"
-                      onClick={() => handleViewCourse(course)}
-                    >
-                      View Course
-                    </button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>

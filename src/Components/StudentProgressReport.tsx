@@ -1,18 +1,32 @@
 import axios from "axios";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useContext} from "react";
 
-const StudentProgressReport = () => {
-    const [students, setStudents] = useState([]);
+type Student = {
+    studentRollNumber: string;
+    studentName: string;    
+    studentDepartment: string;
+    progressPercentage: number;
+    averageGrade: string | number;
+};
+type StudentProgressReportProps = {
+  courseId : any;
+};
+
+
+
+const StudentProgressReport = ({ courseId }: StudentProgressReportProps) => {
+    const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         // Fetch student progress data when component mounts
         const fetchProgressData = async () => {
             try {
-                setLoading(true)
-                const response = await axios.get('https://assignmentservice-2a8o.onrender.com/api/submissions/courses/EC01/student-progress');
-                // const data = await response.json();
+                setLoading(true);
+                // Replace 'courseId' with the actual course ID variable or value
+                const response = await axios.get(`https://assignmentservice-2a8o.onrender.com/api/submissions/courses/${courseId}/student-progress`);
                 setStudents(response.data.students);
+
                 setLoading(false);
             } catch (error) {
                 setLoading(false);
@@ -54,9 +68,12 @@ const StudentProgressReport = () => {
                         ))}
                     </tbody>
                 </table>
-            )};
+            )}  
         </div>
     );
 };
 
 export default StudentProgressReport;
+
+
+

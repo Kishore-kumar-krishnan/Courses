@@ -1,40 +1,62 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const DisplayAssignments = ({ courseId, showAssignments }) => {
-  const [assignments, setAssignments] = useState([]);
+interface Assignment {
+  assignment_id: string;
+  courseId: string;
+  title: string;
+  description: string;
+  createdAt: string;
+  fileno?: string;
+  resourcelink?: string;
+}
+interface ApiResponse {
+  assignments: Assignment[];
+  message: string;
+}
+
+interface DisplayAssignmentsProps {
+  courseId: string | number;
+  showAssignments: boolean;
+}
+
+const DisplayAssignments: React.FC<DisplayAssignmentsProps> = ({ courseId, showAssignments }) => {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
 
-  // Fetch assignments when component mounts or courseId changes
   useEffect(() => {
     if (showAssignments) {
-      fetchAssignments();
+      fetchAssignments(courseId.toString());
     }
+    // eslint-disable-next-line
   }, [showAssignments, courseId]);
 
-  const fetchAssignments = async () => {
+  const fetchAssignments = async (courseId: string): Promise<Assignment[]> => {
     setLoadingAssignments(true);
     try {
-      const response = await axios.get(
-        `https://6838896d2c55e01d184da3a5.mockapi.io/api/course/assignments/courseassignment`
+      const response = await axios.get<ApiResponse>(
+        'https://assignmentservice-2a8o.onrender.com/api/assignments/course?',
+        {
+          params: { courseId }
+        }
       );
-      // If API returns a single object, wrap it in an array
-       const exactMatches = response.data.filter(assignment => 
-        assignment.course_id === courseId.toString()
-      );
-
-      setAssignments(exactMatches);
+      
+      console.log('Full response:', response.data);
+      console.log('Assignments array:', response.data.assignments);
+      setAssignments(response.data.assignments);
+      return response.data.assignments;
     } catch (error) {
       console.error("Error fetching assignments:", error);
+      setAssignments([]);
+      return [];
     } finally {
       setLoadingAssignments(false);
     }
   };
-
-  const handleSubmitAssignment = (assignmentId) => {
+  
+  const handleSubmitAssignment = (assignmentId: string) => {
     // Implement your assignment submission logic here
     console.log("Submitting assignment:", assignmentId);
-    // You might open a modal or navigate to a submission page
   };
 
   return (
@@ -59,9 +81,9 @@ const DisplayAssignments = ({ courseId, showAssignments }) => {
               <div className="mt-4 flex justify-between items-center">
                 <span className="text-sm text-gray-500">
                   {assignment.resourcelink ? (
-                    <a 
-                      href={assignment.resourcelink} 
-                      target="_blank" 
+                    <a
+                      href={assignment.resourcelink}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
                     >
@@ -69,7 +91,7 @@ const DisplayAssignments = ({ courseId, showAssignments }) => {
                     </a>
                   ) : 'No resources available'}
                 </span>
-                <button 
+                <button
                   className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors"
                   onClick={() => handleSubmitAssignment(assignment.assignment_id)}
                 >
