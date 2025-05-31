@@ -135,7 +135,7 @@ function ViewCourse() {
     duration: number;
     credit: number;
     isActive: boolean;
-    image?: string;
+    imageUrl?: string;
     createdAt?: string;
     updatedAt?: string;
     [key: string]: any;
@@ -410,11 +410,13 @@ function ViewCourse() {
         <div className="w-full lg:w-[70%]">
           {/* Course Header */}
           <div className="flex flex-col md:flex-row gap-8 mb-10">
-            <div className="md:w-1/3 relative">
+            <div className="md:w-1/2 relative aspect-video">
+              {" "}
+              {/* Adjust aspect ratio as needed */}
               <img
-                src={course.image}
+                src={course.imageUrl}
                 alt={course.courseTitle}
-                className="w-full rounded-xl shadow-md border border-gray-200"
+                className="w-full h-full object-cover rounded-xl shadow-md border border-gray-200"
               />
             </div>
             {/* Left side course details */}
@@ -658,10 +660,13 @@ function ViewCourse() {
                                   rows={4}
                                 />
                               ) : (
-                                <p className="mb-4 text-gray-800">
-                                  {section.sectionDesc}
-                                </p>
+                                <pre className="font-sans font-medium">
+                                  <p className="mb-4 text-gray-800">
+                                    {section.sectionDesc}
+                                  </p>
+                                </pre>
                               )}
+                              {/* for video and pdf */}
                               <SectionContent
                                 key={section.section_id}
                                 section={section}
@@ -725,7 +730,12 @@ function ViewCourse() {
                 </h2>
                 <div className="space-y-3">
                   <button
-                    onClick={() => setShowAddSection((prev) => !prev)}
+                    onClick={() => {
+                      setShowAddSection((prev) => !prev);
+                      setShowSection(true);
+                      setShowAssignments(false);
+                      setShowReport(false);
+                    }}
                     className="w-full flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 cursor-pointer"
                   >
                     <PlusIcon className="w-5 h-5" />
