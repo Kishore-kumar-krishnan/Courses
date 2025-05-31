@@ -19,7 +19,7 @@ type AuthProviderProps = {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User>({
-    role: 'teacher', // Default role for testing
+    role: 'student', // Default role for testing
     name: 'LEO',
     rollnumber:"STU123"
   });

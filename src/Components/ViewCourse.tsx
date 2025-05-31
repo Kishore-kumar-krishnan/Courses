@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import DisplayAssignments from "./DisplayAssignments";
 import StudentProgressReport from "./StudentProgressReport";
-import StudentProgressDisplay from "./StudentProgressDisplay"
+import StudentProgressDisplay from "./StudentProgressDisplay";
 
 function ViewCourse() {
   type UserRole = "student" | "teacher" | "admin";
@@ -30,14 +30,14 @@ function ViewCourse() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    course_id: '',
-    courseTitle: '',
-    courseDescription: '',
-    instructorName: '',
-    dept: '',
-    duration: '0',
-    credit: '0',
-    isActive: true
+    course_id: "",
+    courseTitle: "",
+    courseDescription: "",
+    instructorName: "",
+    dept: "",
+    duration: "0",
+    credit: "0",
+    isActive: true,
   });
 
   const [newSection, setNewSection] = useState({
@@ -52,7 +52,7 @@ function ViewCourse() {
     sectionDesc: "",
     createdAt: null,
     updatedAt: null,
-    course: { course_id: null }
+    course: { course_id: null },
   });
 
   const [currentSectionId, setCurrentSectionId] = useState(null);
@@ -78,52 +78,53 @@ function ViewCourse() {
   useEffect(() => {
     const fetchSection = async () => {
       try {
-        const sectionResponse = await axios.get(`http://localhost:8080/api/course/section/details?id=${course.course_id}`);
+        const sectionResponse = await axios.get(
+          `http://localhost:8080/api/course/section/details?id=${course.course_id}`
+        );
 
         const sections = Array.isArray(sectionResponse.data)
           ? sectionResponse.data
           : [sectionResponse.data];
 
         setCourseSection(sections); // Update state
-
       } catch (error) {
         console.error("Error fetching section:", error);
       }
-    }
-    fetchSection()
+    };
+    fetchSection();
     // eslint-disable-next-line
-  }, [courseSection])
+  }, [courseSection]);
 
-  // course editing 
+  // course editing
   const handleEditCourse = async () => {
     setEditData({
       course_id: course.course_id,
-      courseTitle: course.courseTitle || '',
-      courseDescription: course.courseDescription || '',
-      instructorName: course.instructorName || '',
-      dept: course.dept || '',
-      duration: course.duration?.toString() || '0',
-      credit: course.credit?.toString() || '0',
-      isActive: course.isActive !== undefined ? course.isActive : true
+      courseTitle: course.courseTitle || "",
+      courseDescription: course.courseDescription || "",
+      instructorName: course.instructorName || "",
+      dept: course.dept || "",
+      duration: course.duration?.toString() || "0",
+      credit: course.credit?.toString() || "0",
+      isActive: course.isActive !== undefined ? course.isActive : true,
     });
     setIsEditing(true);
   };
   // Ensure user.role is typed as string or a union of all possible roles
   const isEnrolled =
-    (user.role === "teacher" || user.role === "admin")
+    user.role === "teacher" || user.role === "admin"
       ? true
       : localStorage.getItem(`enrolled_${id}`) === "true";
   // save updated course data
   interface EditData {
-      course_id: string;
-      courseTitle: string;
-      courseDescription: string;
-      instructorName: string;
-      dept: string;
-      duration: number;
-      credit: number;
-      isActive: boolean;
-    }
+    course_id: string;
+    courseTitle: string;
+    courseDescription: string;
+    instructorName: string;
+    dept: string;
+    duration: number;
+    credit: number;
+    isActive: boolean;
+  }
 
   interface Course {
     course_id: string;
@@ -170,7 +171,6 @@ function ViewCourse() {
 
       // Optional: Show success message
       console.log("Course updated successfully:", response.data);
-
     } catch (error: any) {
       console.error("Error updating course:", error);
       alert("Failed to update course. Please try again.");
@@ -183,17 +183,17 @@ function ViewCourse() {
       const requestBody = {
         sectionTitle: newSection.sectionTitle,
         sectionDesc: newSection.sectionDesc,
-        course: { course_id: course.course_id }
+        course: { course_id: course.course_id },
       };
       // Make API call to add section
       const response = await axios.post(
-        'http://localhost:8080/api/course/section/add',
+        "http://localhost:8080/api/course/section/add",
         requestBody
       );
       // If the API returns the newly created section
       const createdSection = response.data;
       // Update local state with the new section
-      setCourseSection(prevSections => [
+      setCourseSection((prevSections) => [
         ...prevSections,
         {
           section_id: Number(createdSection.section_id),
@@ -201,12 +201,11 @@ function ViewCourse() {
           sectionDesc: createdSection.sectionDesc,
           createdAt: createdSection.createdAt || new Date().toISOString(),
           updatedAt: createdSection.updatedAt || new Date().toISOString(),
-        }
+        },
       ]);
       // Reset form
       setNewSection({ sectionTitle: "", sectionDesc: "" });
       setShowAddSection(false);
-
     } catch (error) {
       console.error("Error adding section:", error);
     }
@@ -220,7 +219,7 @@ function ViewCourse() {
       sectionDesc: section.sectionDesc,
       createdAt: section.createdAt,
       updatedAt: section.updatedAt,
-      course: { course_id: course.course_id }
+      course: { course_id: course.course_id },
     });
   };
   // handle save section - called by handleeditsection
@@ -237,10 +236,13 @@ function ViewCourse() {
         sectionDesc: sectionEditData.sectionDesc,
         createdAt: sectionEditData.createdAt,
         updatedAt: now,
-        course: { course_id: course.course_id }
+        course: { course_id: course.course_id },
       };
 
-      const response = await axios.put("http://localhost:8080/api/course/section/update", payload);
+      const response = await axios.put(
+        "http://localhost:8080/api/course/section/update",
+        payload
+      );
 
       setEditingSectionId(null);
       setSectionEditData({
@@ -249,12 +251,14 @@ function ViewCourse() {
         sectionDesc: "",
         createdAt: null,
         updatedAt: null,
-        course: { course_id: null }
+        course: { course_id: null },
       });
       setError(null);
     } catch (err) {
       console.error("Failed to update section:", err);
-      setError(err.response?.data?.message || err.message || "Failed to update section");
+      setError(
+        err.response?.data?.message || err.message || "Failed to update section"
+      );
     }
   };
   // handle delete / remove section (delete icon)
@@ -265,16 +269,15 @@ function ViewCourse() {
         await axios.delete(`http://localhost:8080/api/course/section/delete`, {
           data: requestBody,
           headers: {
-            'Content-Type': 'text/plain'
-          }
+            "Content-Type": "text/plain",
+          },
         });
 
-        setCourseSection(prevSections =>
-          prevSections.filter(s => s.section_id !== sectionId)
+        setCourseSection((prevSections) =>
+          prevSections.filter((s) => s.section_id !== sectionId)
         );
 
         console.log("Section deleted successfully");
-
       } catch (error) {
         console.error("Error while deleting section:", error);
 
@@ -287,7 +290,8 @@ function ViewCourse() {
     }
   };
 
-  if (!course) return <div className="text-center py-10">Loading course...</div>;
+  if (!course)
+    return <div className="text-center py-10">Loading course...</div>;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -511,6 +515,7 @@ function ViewCourse() {
               </button>
             )}
           </div>
+
           {/* handle add section */}
           {showSection && (
             <>
@@ -676,13 +681,20 @@ function ViewCourse() {
               )}
             </>
           )}
-
+          {/* handle show assignments */}
           {showAssignments && (
-            <DisplayAssignments
-              courseId={course.course_id}
-              showAssignments={showAssignments}
-            />
+            <>
+              {(isEnrolled ||
+                user.role === "teacher" ||
+                user.role === "admin") && (
+                <DisplayAssignments
+                  courseId={course.course_id}
+                  showAssignments={showAssignments}
+                />
+              )}
+            </>
           )}
+          {/* handle show entire report */}
           {showReport && (
             <div className="mt-4">
               <StudentProgressReport courseId={course.course_id} />
@@ -693,13 +705,13 @@ function ViewCourse() {
         {/* Right Side (Progress) */}
         <div className="w-full lg:w-[30%]">
           <div className="sticky top-24 space-y-4">
-            {user.role === "student" && (
+            {isEnrolled && user.role === "student" && (
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                 <h2 className="text-xl font-bold mb-4 text-gray-800">
                   Course Progress
                 </h2>
                 <StudentProgressDisplay
-                  courseId={course.courseId}
+                  courseId={course.course_id}
                   studentId={course.section_id}
                 />
               </div>

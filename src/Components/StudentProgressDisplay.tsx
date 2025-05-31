@@ -31,7 +31,8 @@ function useStudentProgress(courseId: string, studentId: string) {
                 const userProgress = response.data.students.find(
                   (student: Student) => student.studentRollNumber === user?.rollnumber
                 );
-                setPercentage((userProgress) ? userProgress : 0);
+                setPercentage((userProgress) ? userProgress.progressPercentage : 0);
+                // console.log("user percentage: ",userProgress);
                 setLoading(false);
             } catch (error) {
                 setLoading(false);
@@ -41,14 +42,14 @@ function useStudentProgress(courseId: string, studentId: string) {
       }
     };
     fetchProgress();
-  }, [courseId, studentId]);
+  }, []);
 
   return { percentage, loading, error };
 }
 
 export const StudentProgressDisplay = ({ courseId, studentId }: StudentProgressDisplayProps) => {
   const { percentage, loading, error } = useStudentProgress(courseId, studentId);
-    console.log("user percentage: ",percentage);
+    
     
   if (loading) {
     return (
